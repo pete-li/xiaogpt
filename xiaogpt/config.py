@@ -43,9 +43,9 @@ EDGE_TTS_DICT = {
 
 DEFAULT_COMMAND = ("5-1", "5-5")
 
-KEY_WORD = ("帮我", "请回答")
+KEY_WORD = ("请问", "请回答")
 CHANGE_PROMPT_KEY_WORD = ("更改提示词",)
-PROMPT = "以下请用100字以内回答，请只回答文字不要带链接"
+PROMPT = "由于你的回答会作为小爱同学读出来的文本，小爱同学字数限制在120字以内，请你以恰当的方式输出回答，在回答中不要带链接。"
 # simulate_xiaoai_question
 MI_ASK_SIMULATE_DATA = {
     "code": 0,
@@ -66,7 +66,7 @@ class Config:
     keyword: Iterable[str] = KEY_WORD
     change_prompt_keyword: Iterable[str] = CHANGE_PROMPT_KEY_WORD
     prompt: str = PROMPT
-    mute_xiaoai: bool = False
+    mute_xiaoai: bool = True
     bot: str = "chatgpt"
     cookie: str = ""
     api_base: str | None = None
