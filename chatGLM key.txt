@@ -1,0 +1,11 @@
+# 如果你想使用 ChatGLM api
+python3 xiaogpt.py --hardware LX06  --mute_xiaoai --use_glm --glm_key ${glm_key}
+
+73dcfdbf11724243f7134b4b390ea2a2.ju9i4uE51BHjkjRO
+
+
+
+
+
+
+python xiaogpt.py --hardware LX04 --use_chatgpt_api --use_command --mute_xiaoai --stream

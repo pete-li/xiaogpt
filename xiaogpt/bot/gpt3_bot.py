@@ -55,4 +55,4 @@ class GPT3Bot(BaseBot):
             async for sentence in split_sentences(text_gen()):
                 yield sentence
         finally:
-            print()
+            print("")

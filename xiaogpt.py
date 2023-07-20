@@ -2,4 +2,9 @@
 from xiaogpt.cli import main
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            main()
+        except Exception as e:
+            print("main方法捕捉到错误:", e)
+            main()

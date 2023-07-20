@@ -90,7 +90,7 @@ class ChatGPTBot(BaseBot):
                 message += sentence
                 yield sentence
         finally:
-            print()
+            print("")
             self.history.append([f"{query}", message])
             first_history = self.history.pop(0)
             self.history = [first_history] + self.history[-5:]

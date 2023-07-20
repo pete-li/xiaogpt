@@ -255,21 +255,22 @@ class MiGPT:
                 self.new_record_event.set()
 
     async def do_tts(self, value, wait_for_finish=False):
-        if not self.config.use_command:
-            try:
+        try:
+            if not self.config.use_command:
                 await self.mina_service.text_to_speech(self.device_id, value)
-            except Exception:
-                pass
-        else:
-            await miio_command(
-                self.miio_service,
-                self.config.mi_did,
-                f"{self.config.tts_command} {value}",
-            )
-        if wait_for_finish:
-            elapse = calculate_tts_elapse(value)
-            await asyncio.sleep(elapse)
-            await self.wait_for_tts_finish()
+
+            else:
+                await miio_command(
+                    self.miio_service,
+                    self.config.mi_did,
+                    f"{self.config.tts_command} {value}",
+                )
+            if wait_for_finish:
+                elapse = calculate_tts_elapse(value)
+                await asyncio.sleep(elapse)
+                await self.wait_for_tts_finish()
+        except Exception as e:
+            print("do_tts方法出错:", e)
 
     async def wait_for_tts_finish(self):
         while True:
@@ -353,50 +354,59 @@ class MiGPT:
         return message
 
     async def ask_gpt(self, query):
-        if not self.config.stream:
-            async with ClientSession(trust_env=True) as session:
-                openai.aiosession.set(session)
-                if self.config.bot == "glm":
-                    answer = self._chatbot.ask(query, **self.config.gpt_options)
-                else:
-                    answer = await self.chatbot.ask(query, **self.config.gpt_options)
-                message = self._normalize(answer) if answer else ""
-                yield message
-                return
+        try:
+            if not self.config.stream:
+                async with ClientSession(trust_env=True) as session:
+                    openai.aiosession.set(session)
+                    if self.config.bot == "glm":
+                        answer = self._chatbot.ask(query, **self.config.gpt_options)
+                    else:
+                        answer = await self.chatbot.ask(
+                            query, **self.config.gpt_options
+                        )
+                    message = self._normalize(answer) if answer else ""
+                    yield message
+                    return
 
-        async def collect_stream(queue):
-            async with ClientSession(trust_env=True) as session:
-                openai.aiosession.set(session)
-                async for message in self.chatbot.ask_stream(
-                    query, **self.config.gpt_options
-                ):
-                    await queue.put(message)
+            async def collect_stream(queue):
+                async with ClientSession(trust_env=True) as session:
+                    openai.aiosession.set(session)
+                    async for message in self.chatbot.ask_stream(
+                        query, **self.config.gpt_options
+                    ):
+                        await queue.put(message)
 
-        def done_callback(future):
-            queue.put_nowait(EOF)
-            if future.exception():
-                self.log.error(future.exception())
+            def done_callback(future):
+                queue.put_nowait(EOF)
+                if future.exception():
+                    self.log.error(future.exception())
 
-        self.polling_event.set()
-        queue = asyncio.Queue()
-        is_eof = False
-        task = asyncio.create_task(collect_stream(queue))
-        task.add_done_callback(done_callback)
-        while True:
-            if is_eof or self.new_record_event.is_set():
-                break
-            message = await queue.get()
-            if message is EOF:
-                break
-            while not queue.empty():
-                if (next_msg := queue.get_nowait()) is EOF:
-                    is_eof = True
+            self.polling_event.set()
+            queue = asyncio.Queue()
+            is_eof = False
+            task = asyncio.create_task(collect_stream(queue))
+            task.add_done_callback(done_callback)
+            while True:
+                if is_eof or self.new_record_event.is_set():
                     break
-                message += next_msg
-            if message:
-                yield self._normalize(message)
-        self.polling_event.clear()
-        task.cancel()
+                message = await queue.get()
+                if message is EOF:
+                    break
+                while not queue.empty():
+                    if (next_msg := queue.get_nowait()) is EOF:
+                        is_eof = True
+                        break
+                    message += next_msg
+                if message:
+                    yield self._normalize(message)
+            self.polling_event.clear()
+            task.cancel()
+
+        except Exception as e:
+            print("ask_gpt方法出错:", e)
+            message = "处理出错啦，请稍后再试"
+            yield message
+            return
 
     async def get_if_xiaoai_is_playing(self):
         playing_info = await self.mina_service.player_get_status(self.device_id)
@@ -425,8 +435,8 @@ class MiGPT:
             await self.init_all_data(session)
             task = asyncio.create_task(self.poll_latest_ask())
             assert task is not None  # to keep the reference to task, do not remove this
-            print(f"Running xiaogpt now, 用`{'/'.join(self.config.keyword)}`开头来提问")
-            print(f"或用`{self.config.start_conversation}`开始持续对话")
+            print(f"Running xiaogpt now, 用`{'/'.join(self.config.keyword)}`开头来提问 \n")
+            print(f"或用`{self.config.start_conversation}`开始持续对话 \n")
             while True:
                 self.polling_event.set()
                 await self.new_record_event.wait()
@@ -434,17 +444,19 @@ class MiGPT:
                 new_record = self.last_record
                 self.polling_event.clear()  # stop polling when processing the question
                 query = new_record.get("query", "").strip()
+                if "帮我推荐" in query:
+                    query = "帮我推荐" + query
 
                 if query == self.config.start_conversation:
                     if not self.in_conversation:
-                        print("开始对话")
+                        print("开始对话 \n")
                         self.in_conversation = True
                         await self.wakeup_xiaoai()
                     await self.stop_if_xiaoai_is_playing()
                     continue
                 elif query == self.config.end_conversation:
                     if self.in_conversation:
-                        print("结束对话")
+                        print("结束对话 \n")
                         self.in_conversation = False
                     await self.stop_if_xiaoai_is_playing()
                     continue
@@ -470,15 +482,15 @@ class MiGPT:
                 else:
                     # waiting for xiaoai speaker done
                     await asyncio.sleep(8)
-                await self.do_tts("正在问GPT请耐心等待")
+                await self.do_tts(
+                    "您已触发智能问答模式，正在请教人工智能助手chatGPT，请耐心等待！如果您中途不想听了，可以喊我的名字打断我，以下是GPT的回答："
+                )
                 try:
-                    print(
-                        "以下是小爱的回答: ",
-                        new_record.get("answers", [])[0].get("tts", {}).get("text"),
-                    )
+                    print("以下是小爱的回答: \n")
+                    new_record.get("answers", [])[0].get("tts", {}).get("text")
                 except IndexError:
-                    print("小爱没回")
-                print("以下是GPT的回答: ", end="")
+                    print("小爱没回 \n")
+                print("以下是GPT的回答: \n", end="")
                 try:
                     if not self.config.enable_edge_tts:
                         async for message in self.ask_gpt(query):
@@ -490,9 +502,9 @@ class MiGPT:
                         )
                         # tts with edge_tts
                         await self.edge_tts(self.ask_gpt(query), tts_lang)
-                    print("回答完毕")
+                    print("回答完毕 \n")
                 except Exception as e:
-                    print(f"GPT回答出错 {str(e)}")
+                    print(f"GPT处理报错: {e} \n")
                 if self.in_conversation:
-                    print(f"继续对话, 或用`{self.config.end_conversation}`结束对话")
+                    print(f"继续对话, 或用`{self.config.end_conversation}`结束对话 \n")
                     await self.wakeup_xiaoai()
