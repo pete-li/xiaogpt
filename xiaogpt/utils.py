@@ -24,7 +24,7 @@ _no_elapse_chars = re.compile(r"([「」『』《》“”'\"()（）]|(?<!-)-(?
 
 def calculate_tts_elapse(text: str) -> float:
     # for simplicity, we use a fixed speed
-    speed = 4.5  # this value is picked by trial and error
+    speed = 3.8  # 该值经过反复试验得出
     # Exclude quotes and brackets that do not affect the total elapsed time
     return len(_no_elapse_chars.sub("", text)) / speed
 

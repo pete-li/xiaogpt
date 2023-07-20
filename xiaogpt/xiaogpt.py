@@ -470,31 +470,47 @@ class MiGPT:
                     self.log.debug("No new xiao ai record")
                     continue
 
-                # drop 帮我回答
-                query = re.sub(rf"^({'|'.join(self.config.keyword)})", "", query)
+                query = re.sub(
+                    rf"^({'|'.join(self.config.keyword)})", "", query
+                )  # drop 帮我回答
 
-                print("-" * 20)
-                print("问题：" + query + "？")
+                print("-" * 40, "\n")
+                print("问题：" + query + "？\n")
                 if not self.chatbot.history:
                     query = f"{query}，{self.config.prompt}"
                 if self.config.mute_xiaoai:
                     await self.stop_if_xiaoai_is_playing()
                 else:
-                    # waiting for xiaoai speaker done
-                    await asyncio.sleep(8)
-                await self.do_tts(
-                    "您已触发智能问答模式，正在请教人工智能助手chatGPT，请耐心等待！如果您中途不想听了，可以喊我的名字打断我，以下是GPT的回答："
-                )
+                    await asyncio.sleep(8)  # waiting for xiaoai speaker done
+
                 try:
-                    print("以下是小爱的回答: \n")
-                    new_record.get("answers", [])[0].get("tts", {}).get("text")
-                except IndexError:
-                    print("小爱没回 \n")
-                print("以下是GPT的回答: \n", end="")
-                try:
+                    print(
+                        "以下是小爱的回答: \n\n",
+                        new_record.get("answers", [])[0].get("tts", {}).get("text"),
+                        "\n",
+                    )
+
+                    # 播报开始，并创建任务
+                    tts_task = asyncio.create_task(
+                        self.do_tts(
+                            "您已触发智能问答模式，正在请教人工智能助手chatGPT，请耐心等待！如果您中途不想听了，可以叫我的名字打断我说话，以下是GPT的回答：",
+                            wait_for_finish=True,
+                        )
+                    )
+                    print("以下是GPT的回答: \n")
+
+                    gpt_responses = []
+                    async for message in self.ask_gpt(query):
+                        gpt_responses.append(message)
+
+                    # 等待播报完成
+                    await tts_task
+
                     if not self.config.enable_edge_tts:
-                        async for message in self.ask_gpt(query):
-                            await self.do_tts(message, wait_for_finish=True)
+                        for message in gpt_responses:
+                            await self.do_tts(
+                                message, wait_for_finish=True
+                            )  # 逐条播放GPT生成的文本
                     else:
                         tts_lang = (
                             find_key_by_partial_string(EDGE_TTS_DICT, query)
@@ -503,6 +519,8 @@ class MiGPT:
                         # tts with edge_tts
                         await self.edge_tts(self.ask_gpt(query), tts_lang)
                     print("回答完毕 \n")
+                except IndexError:
+                    print("小爱没回 \n")
                 except Exception as e:
                     print(f"GPT处理报错: {e} \n")
                 if self.in_conversation:

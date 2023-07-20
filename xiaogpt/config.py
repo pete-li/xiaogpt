@@ -45,9 +45,10 @@ DEFAULT_COMMAND = ("5-1", "5-5")
 
 KEY_WORD = ("帮我推荐", "请问", "请回答")
 CHANGE_PROMPT_KEY_WORD = ("更改提示词",)
-PROMPT = """由于你的回答会作为小爱触屏音箱读出来的文本,它读的字数限制在120字以内,请你以恰当的方式输出回答。
-            回答的注意事项：“你回答的对象是中老年人，他们小学文化水平，教育程度不高，请用通俗易懂的文字回答，在回答中不要使用链接和英语，
-                            并且回答的背景环境是在中国大陆境内。”"""
+PROMPT = """
+            回答的注意事项：“你回答服务的对象教育文化程度不高，小学文化水平，请用通俗易懂的表达，在回答中不要出现英语与链接，
+                            由于你的回答会作为小爱触屏音箱读出来的文本,它读的字数限制在120字以内,而且环境背景是在中国,
+                            请你注意措辞并且以恰当的方式输出回答。”"""
 # simulate_xiaoai_question
 MI_ASK_SIMULATE_DATA = {
     "code": 0,
@@ -58,7 +59,7 @@ MI_ASK_SIMULATE_DATA = {
 
 @dataclass
 class Config:
-    hardware: str = "LX06"
+    hardware: str = "LX04"
     account: str = os.getenv("MI_USER", "")
     password: str = os.getenv("MI_PASS", "")
     openai_key: str = os.getenv("OPENAI_API_KEY", "")
