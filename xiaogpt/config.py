@@ -10,7 +10,6 @@ from xiaogpt.utils import validate_proxy
 
 LATEST_ASK_API = "https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware={hardware}&timestamp={timestamp}&limit=2"
 COOKIE_TEMPLATE = "deviceId={device_id}; serviceToken={service_token}; userId={user_id}"
-WAKEUP_KEYWORD = "小爱同学"
 
 HARDWARE_COMMAND_DICT = {
     # hardware: (tts_command, wakeup_command)
@@ -19,7 +18,7 @@ HARDWARE_COMMAND_DICT = {
     "S12A": ("5-1", "5-5"),
     "LX01": ("5-1", "5-5"),
     "L06A": ("5-1", "5-5"),
-    "LX04": ("5-1", "5-4"),
+    "LX04": ("5-1", "5-2", "5-4"),  # 5-1是播报文本内容 5-2 #1是唤醒  5-4 #1是执行播放内容
     "L05C": ("5-3", "5-4"),
     "L17A": ("7-3", "7-4"),
     "X08E": ("7-3", "7-4"),
@@ -41,9 +40,9 @@ EDGE_TTS_DICT = {
     # add more here
 }
 
-DEFAULT_COMMAND = ("5-1", "5-5")
+DEFAULT_COMMAND = ("5-1", "5-2", "5-4")  # 5-1是播报文本内容 5-2 #1是唤醒  5-4 #1是执行播放内容
 
-KEY_WORD = ("帮我推荐", "请问", "请回答")
+KEY_WORD = ("请问", "帮我挑", "帮我推荐", "推荐")
 CHANGE_PROMPT_KEY_WORD = ("更改提示词",)
 PROMPT = """
             回答的注意事项：“你回答服务的对象教育文化程度不高，小学文化水平，请用通俗易懂的表达，在回答中不要出现英语与链接，
@@ -76,8 +75,8 @@ class Config:
     deployment_id: str | None = None
     use_command: bool = False
     verbose: bool = False
-    start_conversation: str = "开始持续对话"
-    end_conversation: str = "结束持续对话"
+    # start_conversation: str = "开始持续对话"
+    # end_conversation: str = "结束持续对话"
     stream: bool = False
     enable_edge_tts: bool = False
     localhost: bool = True
@@ -114,6 +113,10 @@ class Config:
     @property
     def wakeup_command(self) -> str:
         return HARDWARE_COMMAND_DICT.get(self.hardware, DEFAULT_COMMAND)[1]
+
+    @property
+    def execute_command(self) -> str:
+        return HARDWARE_COMMAND_DICT.get(self.hardware, DEFAULT_COMMAND)[2]
 
     @classmethod
     def from_options(cls, options: argparse.Namespace) -> Config:

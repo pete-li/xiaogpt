@@ -135,3 +135,6 @@ config/
 *.mp3
 .pdm-python
 .pdm-build/
+
+# 有key的不上传
+one_click.bat

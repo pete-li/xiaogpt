@@ -60,6 +60,7 @@ class ChatGPTBot(BaseBot):
         # only keep 5 history
         first_history = self.history.pop(0)
         self.history = [first_history] + self.history[-5:]
+        message += " 主人,我已经回答完啦！您如果还有什么想法或者疑问，可以继续用关键词向我提问喔! \n"
         print(message)
         return message
 
