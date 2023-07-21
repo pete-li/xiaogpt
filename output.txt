@@ -1,0 +1,2 @@
+Running xiaogpt now, 用`请问/帮我挑/帮我推荐/推荐`开头来提问 
+
